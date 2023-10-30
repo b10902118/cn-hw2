@@ -5,7 +5,7 @@ RUN apt update
 RUN yes | unminimize
 RUN apt install -y tini iproute2 iputils-ping net-tools netcat
 RUN apt install -y openssh-server sudo vim grep gawk rsync tmux man manpages manpages-dev manpages-posix manpages-posix-dev diffutils
-RUN apt install -y gcc gcc-multilib g++ g++-multilib gdb make yasm nasm tcpdump libcapstone-dev python3
+RUN apt install -y gcc g++ gdb make yasm nasm tcpdump libcapstone-dev python3
 RUN apt install -y libc6-dbg dpkg-dev
 RUN apt install -y curl git zsh
 RUN apt install -y apache2-utils

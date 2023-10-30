@@ -2,7 +2,7 @@ version: '2'
 
 services:
   main:
-    build: .
+    image: exodustw/cn-hw2:latest # build: .
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
