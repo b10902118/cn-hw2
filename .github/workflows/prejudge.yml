@@ -1,0 +1,24 @@
+name: cn2023-hw2-prejudge
+run-name: ${{ github.repository_owner }} HW2 Prejudge
+on:
+  push:
+    branches:
+      - main
+jobs:
+  server-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: gcc -v
+      - run: cp .testcase/assets/secret hw2
+      - run: cd hw2 && make && ./server 8080 &
+      - run: python .testcase/server-0.py 8080
+  client-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: gcc -v
+      - run: cd hw2 && make
+      - run: pip install Flask Flask-HTTPAuth pwntools
+      - run: cd .testcase/assets/pseudo-server && python web.py &
+      - run: cd .testcase && python client-0.py
