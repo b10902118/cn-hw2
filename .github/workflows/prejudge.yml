@@ -7,6 +7,7 @@ on:
 jobs:
   server-test:
     runs-on: ubuntu-20.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - run: gcc -v
@@ -15,6 +16,7 @@ jobs:
       - run: python .testcase/server-0.py 8080
   client-test:
     runs-on: ubuntu-20.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - run: gcc -v
