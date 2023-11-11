@@ -1,0 +1,6 @@
+GET / HTTP/1.1
+Host: google.com
+User-Agent: curl/7.81.0
+Accept: */*
+
+This is body

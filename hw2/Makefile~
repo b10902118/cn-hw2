@@ -2,8 +2,8 @@
 
 all: server client
 server: server.c
-	gcc -Wall -o server server.c
+	g++ -Wno-unused-variable -o server server.cc
 client: client.c
-	gcc -Wall -o client client.c
+	g++ -Wno-unused-variable -o client client.cc
 clean:
 	@rm -rf server client 
