@@ -12,6 +12,8 @@
 #include "request.h"
 #include "utils.h"
 
+using namespace std;
+
 const int PORT = 9999;
 const int MAXFD = 1024;
 const int BUFSZ = 1024 * 1024 * 1024;
@@ -27,7 +29,6 @@ int main(int argc, char *argv[]) {
     int listenfd, connfd;
     sockaddr_in server_addr, client_addr;
     int client_addr_len = sizeof(client_addr);
-    // char *message = "Hello World!";
 
     // Get socket file descriptor
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -84,12 +85,9 @@ int main(int argc, char *argv[]) {
                 // puts("DATA");
                 int n_recv = recv(conns[i].fd, ReqBuf, sizeof(ReqBuf), 0);
                 if (n_recv > 0) {
-                    parse_request(ReqBuf);
-                    puts(type == 0 ? "GET" : "POST");
-                    puts(URI);
-                    for (int j = 0; j < n_header; ++j) {
-                        puts(headers[j]);
-                    }
+                    // believe that buffer is big enough
+                    Request request(ReqBuf);
+                    if (request.isValid()) request.showRequest();
                 }
                 else if (n_recv == 0) {
                     // puts("EOF");
