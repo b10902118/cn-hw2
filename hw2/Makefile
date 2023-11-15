@@ -1,9 +1,24 @@
 .PHONY: all clean
 
+CXX := g++
+CXXFLAGS := -Wall -Wno-unused-variable
+
+SERVER_SRCS := server.cc request.cc utils.cc utils/base64.c
+CLIENT_SRCS := client.cc request.cc utils.cc utils/base64.c
+
 all: server client
-server: server.cc request.h
-	g++ -Wno-unused-variable -o server server.cc
-client: client.cc
-	g++ -Wno-unused-variable -o client client.cc
+
+# $@: target
+# $^ prerequisites
+server: $(SERVER_SRCS:.cc=.o)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+client: $(CLIENT_SRCS:.cc=.o)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 clean:
-	@rm -rf server client 
+	rm -f server client *.o
+

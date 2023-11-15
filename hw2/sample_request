@@ -1,0 +1,12 @@
+POST /test HTTP/1.1
+Host: example.com
+Connection: clOse
+content-type: multipart/form-data
+autHorization: Basic dXNlcm5hbWUxOnBhc3N3b3JkMQ==
+Cache-Control: no-cache
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla /5.0 (Windows NT 10.0; Win64; x64) AppleWebKit /537.36 (KHTML , like Gecko)
+Accept: text/html ,application/xhtml+xml ,application/xml;q=0.9, image/avif ,image/webp ,image/apng
+Accept-Language: zh-TW ,zh;q=0.9,en-US;q=0.8,en;q=0.7,fr;q=0.6,ms;q=0.5,zh-CN;q=0.4
+
+sample body
