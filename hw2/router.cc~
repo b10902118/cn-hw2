@@ -1,0 +1,33 @@
+// Router.h
+#pragma once
+
+#include <string>
+#include "request.h"
+
+class Router {
+  public:
+    std::string route(const Request &request) const;
+};
+
+// Router.cpp
+#include "router.h"
+
+std::string Router::route(const Request &request) const {
+    // Implement your routing logic based on method and URI
+    if (request.method == GET) {
+        if (request.URI == "/") return "serve index.html";
+        else if (request.URI == "/upload/file") return "serve uploadf.html";
+        else if (request.URI == "/file/")
+            return "use template listf.rhtml to list files";
+        // Add other conditions based on URI
+    }
+    else if (request.method == POST) {
+        if (request.URI == "/api/file") return "upload file to server";
+        else if (request.URI == "/api/video")
+            return "upload video file to server";
+        // Add other conditions based on URI
+    }
+
+    // Default case if no route matches
+    return "Unknown endpoint";
+}

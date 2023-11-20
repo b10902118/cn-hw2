@@ -1,4 +1,4 @@
-GET /api/file/abcd*** HTTP/1.1
+POST /api/file HTTP/1.1
 Host: example.com
 Connection: clOse
 content-type: multipart/form-data

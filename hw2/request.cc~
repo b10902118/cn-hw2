@@ -1,7 +1,7 @@
 #include "request.h"
 
 Request::Request(char *buf)
-    : method(GET), valid(true), connected(true), body(nullptr) {
+    : valid(true), method(GET), connected(true), body(nullptr) {
     parseRequest(buf);
 }
 

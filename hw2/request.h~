@@ -30,6 +30,8 @@ class Request {
     char *body;
 
     Request(char *buf);
+    Request(char *buf)
+        : valid(true), method(GET), connected(true), body(nullptr);
     //~Request();
     void showRequest();
 

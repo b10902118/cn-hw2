@@ -138,6 +138,33 @@ int main(int argc, char *argv[]) {
                             perror("Router::route");
                         }
                     }
+                    /*
+                                        switch (ret.idx) {
+                                        case Router::Root:
+                                            break;
+                                        case Router::UploadFile:
+                                            break;
+                                        case Router::UploadVideo:
+                                            break;
+                                        case Router::File:
+                                            break;
+                                        case Router::Video:
+                                            break;
+                                        case Router::VideoPath:
+                                            break;
+                                        case Router::ApiFile:
+                                            break;
+                                        case Router::ApiFilePath:
+                                            break;
+                                        case Router::ApiVideo:
+                                            break;
+                                        case Router::ApiVideoPath:
+                                            break;
+                                        default:
+                                            if (ret.idx != Unknown)
+                       perror("Router::route");
+                                        }
+                                                            */
                 }
                 else if (n_recv == 0) {
                     // puts("EOF");
