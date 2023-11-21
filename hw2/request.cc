@@ -1,4 +1,7 @@
 #include "request.h"
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 Request::Request(char *buf)
     : method(GET), valid(true), connected(true), body(nullptr) {
@@ -25,9 +28,63 @@ void Request::showRequest() {
 
     // Display body (if available)
     if (method == POST) {
-        if (body) std::cout << "Body: " << body << std::endl;
+        if (body)
+            std::cout << "Body:\n"
+                      << "--------------------------\n"
+                      << body << "--------------------------\n"
+                      << std::endl;
         else std::cout << "Body: [empty]" << std::endl;
     }
+}
+
+// Function to receive HTTP header until \r\n\r\n and preserve content after
+// the delimiter
+// assume header are all sent together
+std::string recvHeader(int socket) {
+    const int bufferSize = 4096;
+    char buffer[bufferSize];
+
+    std::string httpHeader;
+    bool readable = true;
+
+    while (readable) {
+        // Peek into the socket to read the data without removing it
+        ssize_t bytesRead = recv(socket, buffer, bufferSize - 1, MSG_PEEK);
+
+        if (bytesRead <= 0) {
+            // Error or connection closed
+            INVALID_REQUEST("recvHeader: recv bytesRead<=0");
+            break;
+        }
+
+        buffer[bytesRead] = '\0'; // Null-terminate the buffer
+
+        // Search for the \r\n\r\n delimiter in the buffer
+        char *delimiter = strstr(buffer, "\r\n\r\n");
+
+        if (delimiter != nullptr) {
+            // Include the delimiter in the HTTP header
+            httpHeader.append(buffer, delimiter + 4 - buffer);
+
+            // Remove the data from the socket up to and including the
+            // delimiter
+            ssize_t len = delimiter + 4 - buffer;
+            recv(socket, buffer, len, 0);
+
+            break; // Exit the loop once the delimiter is found
+        }
+        else {
+            int bytesAvailable,
+            err = ioctl(socket, FIONREAD, &bytesAvailable);
+            if (err == -1) {
+                INVALID_REQUEST("recvHeader: ioctl");
+                break;
+            }
+            readable = bytesAvailable > 0;
+        }
+    }
+
+    return httpHeader;
 }
 
 const std::string Request::headerName[3] = {[Connection] = "Connection",
@@ -61,11 +118,13 @@ std::string Request::extractHeaderValue(char *header) {
     return "";
 }
 
-// Parse the entire request
-void Request::parseRequest(char *buf) {
+void Request::parseHeader(char *buf) {
     // Parse the request line
     char *request_line = strtok(buf, "\r");
-    if (request_line == NULL) INVALID_REQUEST("No request line");
+    if (request_line == NULL) {
+        INVALID_REQUEST("No request line");
+        return;
+    }
 
     if (strncmp("GET ", request_line, 4) == 0) {
         method = GET;
@@ -75,7 +134,10 @@ void Request::parseRequest(char *buf) {
         method = POST;
         request_line += 5;
     }
-    else INVALID_REQUEST("Method");
+    else {
+        INVALID_REQUEST("Method");
+        return;
+    }
 
     // check " HTTP/1.1" and copy uri
     // cout << strlen(request_line) << ' ' << strlen(" HTTP/1.1");
@@ -83,9 +145,14 @@ void Request::parseRequest(char *buf) {
     char *const version_str =
     request_line + strlen(request_line) - strlen(" HTTP/1.1");
     // cout << version_str << std::endl;
-    if (version_str <= request_line) INVALID_REQUEST("No URI");
-    if (std::strcmp(version_str, " HTTP/1.1") != 0)
+    if (version_str <= request_line) {
+        INVALID_REQUEST("No URI");
+        return;
+    }
+    if (std::strcmp(version_str, " HTTP/1.1") != 0) {
         INVALID_REQUEST("HTTP version");
+        return;
+    }
 
     *version_str = '\0';
     URI = std::string(request_line);
@@ -133,8 +200,8 @@ cerr << '"' << value.c_str() << '"' << std::endl;
             break;
         }
     }
-    if (s == NULL) INVALID_REQUEST("no double CRLF");
-    if (method == POST) body = s + 2;
+    // if (s == NULL) INVALID_REQUEST("no double CRLF");
+    // if (method == POST) body = s + 2;
 }
 
 // Convert Method enum to string

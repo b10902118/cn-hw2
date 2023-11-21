@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <cctype>
 
 bool icaseCmp(const std::string &str1, const std::string &str2) {
     if (str1.length() != str2.length()) return false;

@@ -12,11 +12,12 @@
 enum Method { GET, POST };
 enum HeaderType { Connection, Content_Type, Authorization, Other };
 
+const int BUFSZ = 1024 * 4;
+
 #define INVALID_REQUEST(message)                                            \
     do {                                                                    \
         valid = false;                                                      \
         std::cerr << "Invalid request: " << message << std::endl;           \
-        return;                                                             \
     } while (false)
 
 class Request {
@@ -27,7 +28,8 @@ class Request {
     std::string URI;
     std::string credential;
     std::string contentType;
-    char *body;
+    char buf[BUFSZ];
+    char *bufHead;
 
     Request(char *buf);
     //~Request();

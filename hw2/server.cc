@@ -15,18 +15,24 @@
 
 using namespace std;
 
-const int PORT = 9999;
 const int MAXFD = 1024;
-const int BUFSZ = 1024 * 1024 * 1024;
 
 const short poll_read = POLLIN | POLLPRI;
 const short poll_write = POLLOUT | POLLWRBAND;
 const short poll_err = POLLERR | POLLNVAL | POLLHUP;
 const short poll_mask = poll_read | poll_write;
 
-char ReqBuf[BUFSZ];
+char ReqBuf[MAXFD][BUFSZ];
 
 int main(int argc, char *argv[]) {
+
+    if (argv[1] == nullptr) {
+        cerr << "Usage: ./ server [port]";
+        return -1;
+    }
+    // assume valid port
+    const int PORT = atoi(argv[1]);
+
     int listenfd, connfd;
     sockaddr_in server_addr, client_addr;
     int client_addr_len = sizeof(client_addr);
@@ -52,7 +58,6 @@ int main(int argc, char *argv[]) {
         ERR_EXIT("listen()");
     }
 
-    int client_n = 0;
     pollfd conns[MAXFD];
     for (int i = 1; i < MAXFD; ++i) conns[i] = (pollfd){-1, poll_mask, 0};
     conns[listenfd].fd = listenfd;
@@ -82,7 +87,7 @@ int main(int argc, char *argv[]) {
             if (conns[i].fd < 0 || conns[i].fd == listenfd) continue;
             if (conns[i].revents & POLLIN) { // can be data or close (EOF)
                 // puts("DATA");
-                int n_recv = recv(conns[i].fd, ReqBuf, sizeof(ReqBuf), 0);
+                int n_recv = recv(conns[i].fd, ReqBuf[i], BUFSZ, 0);
                 if (n_recv > 0) {
                     // believe that buffer is big enough
                     Request request(ReqBuf);
@@ -156,7 +161,4 @@ if (conns[i].revents & POLLOUT) {
             */
         }
     }
-
-    close(connfd);
-    close(listenfd);
 }

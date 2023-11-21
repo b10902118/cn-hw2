@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <unistd.h>
 #include <vector>
 #define ERR_EXIT(a)                                                         \
     {                                                                       \
