@@ -1,9 +1,10 @@
 .PHONY: all clean
 
 CXX := g++
-CXXFLAGS := -Wall -Wno-unused-variable -Wno-sign-compare -Wno-char-subscripts
+CXXFLAGS := -ggdb -Wall -Wno-unused-variable -Wno-sign-compare -Wno-char-subscripts 
+#-fsanitize=address 
 
-SERVER_SRCS := server.cc request.cc utils.cc utils/base64.c backend.cc
+SERVER_SRCS := server.cc request.cc utils.cc utils/base64.c backend.cc html.cc fs.cc response.cc auth.cc
 CLIENT_SRCS := client.cc request.cc utils.cc utils/base64.c
 
 all: server client

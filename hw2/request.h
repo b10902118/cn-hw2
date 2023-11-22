@@ -10,37 +10,47 @@
 #include "utils/base64.h"
 
 enum Method { GET, POST };
-enum HeaderType { Connection, Content_Type, Authorization, Other };
+enum HeaderType {
+    Connection,
+    Content_Type,
+    Authorization,
+    ContentLength,
+    ContentDisposition,
+    Other
+};
 
-const int BUFSZ = 1024 * 4;
+enum ServeStage { HEADER, BODY, ROUTE };
 
-#define INVALID_REQUEST(message)                                            \
-    do {                                                                    \
-        valid = false;                                                      \
-        std::cerr << "Invalid request: " << message << std::endl;           \
-    } while (false)
+std::string methodToString(Method method);
+
+std::string decodeURI(const std::string &uri);
 
 class Request {
   public:
     Method method;
     bool valid;
+    ServeStage stage;
     bool connected;
+    int contentLen;
+    std::string boundary;
     std::string URI;
     std::string credential;
     std::string contentType;
-    char buf[BUFSZ];
-    char *bufHead;
+    std::string filePath;
+    std::string Response;
 
-    Request(char *buf);
+    Request();
     //~Request();
+    std::string recvHeader(int socket);
+    void parseHeader(const std::string &httpHeader);
     void showRequest();
 
   private:
-    static const std::string headerName[3];
+    static const std::string headerName[5];
 
-    static bool matchHeaderName(char *header, const std::string &name);
-    static HeaderType getHeaderType(char *header);
-    static std::string extractHeaderValue(char *header);
-    void parseRequest(char *buf);
-    std::string methodToString() const;
+    static bool matchHeaderName(const std::string &header,
+                                const std::string &name);
+    static HeaderType getHeaderType(const std::string &header);
+    static std::string extractHeaderValue(const std::string &header);
+    bool parseRequestLine(const std::string request_line);
 };

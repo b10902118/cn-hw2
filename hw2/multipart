@@ -1,0 +1,16 @@
+Content-type: multipart/form-data; boundary=----WebKitFormBoundaryQBoeQpJM8kuxMGTD
+Credential: username1:password1
+Contenti-Length: 290
+1
+
+------WebKitFormBoundaryQBoeQpJM8kuxMGTD
+Content-Disposition: form-data; name="upfile"; filename="a"
+Content-Type: application/octet-stream
+
+
+------WebKitFormBoundaryQBoeQpJM8kuxMGTD
+Content-Disposition: form-data; name="submit"
+
+Upload
+------WebKitFormBoundaryQBoeQpJM8kuxMGTD--
+

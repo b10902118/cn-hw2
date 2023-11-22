@@ -24,10 +24,9 @@ Endpoint endpoints[] = {
 };
 // clang-format on
 
-Result::Result(EndpointIndex idx, std::string filePath)
-    : idx(idx), filePath(filePath) {}
+Result::Result(EndpointIndex idx, bool valid) : idx(idx), valid(valid) {}
 
-Result route(const Request &request) {
+Result route(Request &request) {
     // Iterate over endpoints to find a match
 
     assert(endpoints[ApiVideoPath].URI == "/api/video/");
@@ -36,19 +35,20 @@ Result route(const Request &request) {
          i = static_cast<EndpointIndex>(i + 1)) {
         Endpoint &endpoint = endpoints[i];
         if (request.URI == endpoint.URI) {
-            if (request.method == endpoint.method) return Result(i);
-            return Result(Unknown);
+            return Result(i, request.method == endpoint.method);
         }
         else if (endpoint.getFile &&
                  request.URI.substr(0, endpoint.URI.length()) ==
                  endpoint.URI) {
-            if (request.method == endpoint.method)
-                return Result(i, request.URI.substr(endpoint.URI.length()));
-            return Result(Unknown);
+            if (request.method == endpoint.method) {
+                request.filePath = request.URI.substr(endpoint.URI.length());
+                return Result(i);
+            }
+            return Result(i, false);
         }
     }
     // No matching route
-    return Result(Unknown);
+    return Result(Unknown, false);
 }
 
 } // namespace Router

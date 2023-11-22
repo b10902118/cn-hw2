@@ -31,11 +31,11 @@ enum EndpointIndex {
 };
 struct Result {
     EndpointIndex idx;
-    std::string filePath;
+    bool valid;
 
-    Result(EndpointIndex idx, std::string filePath = "");
+    Result(EndpointIndex idx, bool valid = true);
 };
 
 extern Endpoint endpoints[];
-Result route(const Request &request);
+Result route(Request &request);
 } // namespace Router
