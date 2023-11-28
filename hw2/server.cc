@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -131,9 +132,12 @@ int main(int argc, char *argv[]) {
                     request.showRequest();
                 }
                 else if (request.stage == BODY) { // receiving body
-                    ssize_t to_recv = min(BUFSZ, request.contentLen);
-                    // recv 0 still hang
-                    int n_recv = recv(i, bodyBuf, to_recv, 0);
+                    request.tmpName = to_string(Request::fileCounter++);
+
+                    ssize_t to_recv = min(BUFSZ - 1, request.contentLen);
+                    // recv 0 don't
+                    // assume >0
+                    ssize_t n_recv = recv(i, bodyBuf, to_recv, 0);
                     if (n_recv < 0) {
                         perror("recv:");
                     }
@@ -141,10 +145,13 @@ int main(int argc, char *argv[]) {
                         cerr << "unexpected close of connection" << endl;
                     }
                     bodyBuf[n_recv] = '\0';
-                    cout << bodyBuf << endl;
-                    if (request.contentLen - to_recv == 0) {
-                        request.stage = ROUTE;
+                    // write to file
+                    Fs::appendData("./web/tmp/" + request.tmpName, bodyBuf, n_recv);
+                    request.received += n_recv;
+                    if (request.received == request.contentLen) {
+                        // Fs::parseUpload();
                     }
+                    request.stage = ROUTE;
                     //  TODO write to file, handle boundary & content length
                     //  & filesize state: file too big
                 }
@@ -152,6 +159,7 @@ int main(int argc, char *argv[]) {
                     Router::Result ret = Router::route(request);
                     vector<char> raw_resp;
                     vector<char> fileBuf;
+                    string fullPath;
                     cout << "filePath: " << request.filePath << endl;
                     if (!ret.valid) {
                         if (ret.idx == Router::Unknown) { // 404
@@ -165,7 +173,6 @@ int main(int argc, char *argv[]) {
                     }
                     else { // default valid routing
                         response.setStatusCode(200);
-                        // TODO Auth
                         switch (ret.idx) {
                         case Router::Root:
                             std::cout << "Routing to Root" << std::endl;
@@ -199,9 +206,9 @@ int main(int argc, char *argv[]) {
                             Html::tagToList(Html::listv, "VIDEO_LIST", "/video/", "./web/videos"));
                             break;
                         case Router::VideoPath:
-                            // TODO check existance
                             std::cout << "Routing to VideoPath" << std::endl;
                             // clang-format off
+							fullPath = Fs::validPath(Fs::VideoRoot, request.filePath);
 							if (!Fs::fileExists("./web/videos/"+request.filePath)){//404
                             	raw_resp = response.res_404();
 							}
@@ -217,8 +224,10 @@ int main(int argc, char *argv[]) {
                             // clang-format on
                             break;
 
-                        case Router::ApiFile:
+                        case Router::ApiFile: // TODO
                             std::cout << "Routing to ApiFile" << std::endl;
+                            if (!Auth::authorized(request.credential))
+                                raw_resp = response.res_401();
                             break;
                         case Router::ApiFilePath:
                             std::cout << "Routing to ApiFilePath" << std::endl;
@@ -226,18 +235,19 @@ int main(int argc, char *argv[]) {
                                 raw_resp = response.res_401();
                             else {
                                 // check exist
-                                if (!Fs::fileExists("./web/files/" + request.filePath)) { // 404
+                                fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
+                                if (!Fs::fileExists(fullPath)) { // 404
                                     raw_resp = response.res_404();
                                 }
                                 else {
                                     response.setContentType(Fs::getMimeType(request.filePath));
-                                    fileBuf = Fs::readBinary("./web/files/" + request.filePath);
+                                    fileBuf = Fs::readBinary(fullPath);
                                     raw_resp =
                                     response.getFormattedResponse(fileBuf.data(), fileBuf.size());
                                 }
                             }
                             break;
-                        case Router::ApiVideo:
+                        case Router::ApiVideo: // TODO
                             std::cout << "Routing to ApiVideo" << std::endl;
                             if (!Auth::authorized(request.credential))
                                 raw_resp = response.res_401();
@@ -248,12 +258,13 @@ int main(int argc, char *argv[]) {
                                 raw_resp = response.res_401();
                             else {
                                 // check exist
-                                if (!Fs::fileExists("./web/videos/" + request.filePath)) { // 404
+                                fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
+                                if (!Fs::fileExists(fullPath)) { // 404
                                     raw_resp = response.res_404();
                                 }
                                 else {
                                     response.setContentType(Fs::getMimeType(request.filePath));
-                                    fileBuf = Fs::readBinary("./web/videos/" + request.filePath);
+                                    fileBuf = Fs::readBinary(fullPath);
                                     raw_resp =
                                     response.getFormattedResponse(fileBuf.data(), fileBuf.size());
                                 }
@@ -262,10 +273,15 @@ int main(int argc, char *argv[]) {
                         default:
                             std::cout << "Unknown routing result" << std::endl;
                             // Default case for unknown result
-                            if (ret.idx != Router::Unknown) {
-                                perror("Router::route");
-                            }
+                            /*
+if (ret.idx != Router::Unknown) {
+    perror("Router::route");
+}
+                            */
                         }
+                    }
+                    if (!(conns[i].revents & POLLOUT && request.response != "")) {
+                        cerr << "No POLLOUT, blocking response" << endl;
                     }
                     send(i, raw_resp.data(), raw_resp.size(), 0);
                     if (!request.connected) {
@@ -276,7 +292,6 @@ int main(int argc, char *argv[]) {
                     request.stage = HEADER;
                 }
             }
-            // if (conns[i].revents & POLLOUT && request.response != "") {
             //}
         }
     }

@@ -7,13 +7,100 @@
 #include <iostream>
 #include <filesystem>
 #include <unistd.h>
+#include <cstdlib>
+#include <limits.h> // For PATH_MAX
+
+using namespace std;
 
 namespace Fs {
 
+const std::string FileRoot = "web/files/";
+const std::string VideoRoot = "web/videos/";
+const std::string TmpDir = "web/tmp/";
+const std::string baseDir = "./";
+
 void init() {
-    if (!createDirectory("./web/files")) std::cerr << "cannot create dir";
-    if (!createDirectory("./web/videos")) std::cerr << "cannot create dir";
-    if (!createDirectory("./web/videos")) std::cerr << "cannot create dir";
+    if (!createDirectory(TmpDir)) std::cerr << "cannot create dir";
+    if (!createDirectory(FileRoot)) std::cerr << "cannot create dir";
+    if (!createDirectory(VideoRoot)) std::cerr << "cannot create dir";
+}
+
+std::string validPath(const std::string root, const std::string filePath) {
+    char resolvedPath[PATH_MAX];
+    static const std::string fullBase = [&resolvedPath] {
+        char *absBase = realpath(baseDir.c_str(), resolvedPath);
+        if (absBase == nullptr) {
+            std::cerr << "realpath(baseDir) error" << std::endl;
+        }
+        return std::string(absBase);
+    }();
+
+    // Use realpath to get the absolute path
+    std::string fullPath = root + filePath;
+    // cerr << "fullPath" << fullPath << endl;
+    char *absolutePath = realpath(fullPath.c_str(), resolvedPath);
+    // cerr << "resolved " << absolutePath << endl;
+    if (absolutePath == nullptr) { // if the path does not exist
+        return "";
+    }
+    std::string absPath = std::string(absolutePath);
+    std::string fullRoot = fullBase + "/" + root;
+    // cerr << "fullBase " << fullBase << endl;
+    // std::cerr << "absPath " << absPath << std::endl;
+    // cerr << "fullRoot " << fullRoot << endl;
+
+    // Check if the resolved path is within the root path
+    if (absPath.compare(0, fullBase.length(), fullBase) == 0) {
+        return absPath;
+    }
+    else {
+        return "";
+    }
+}
+
+void parse_upload() {
+    /*
+// parse file
+std::ifstream file("./web/tmp/" + request.tmpName, std::ios::binary);
+std::string line, disposition;
+getline(file, line);
+getline(file, disposition);
+// extract name
+size_t pos = disposition.find("filename=\"");
+if (pos == string::npos) cerr << "disposition no filename" << endl;
+pos += strlen("filename=\"");
+request.filePath = disposition.substr(pos, disposition.length() - strlen("\"\r\n") - pos);
+Fs::createDirectory("./web/videos/" + request.filePath);
+
+getline(file, line);
+getline(file, line);
+bool first = true;
+string fullPath = "./web/tmp/" + request.filePath;
+while (std::getline(file, line, '\r')) {
+    if (line.substr(1) == request.boundary) break;
+    if (!first) {
+        line = "\r" + line;
+        first = false;
+    }
+    Fs::appendData(fullPath, line.c_str(), line.length());
+}
+pid_t pid = fork();
+
+if (pid == -1) {
+    // Handle fork error
+    std::cerr << "Error forking process." << std::endl;
+    return 1;
+}
+else if (pid == 0) {
+    // This is the child process
+    execl("/bin/sh", "sh", "-c", command, nullptr);
+    // If execl fails
+    std::cerr << "Error executing the command." << std::endl;
+    _exit(1);
+}
+else {
+}
+    */
 }
 
 std::vector<std::string> readLines(const std::string &filePath) {
@@ -57,6 +144,25 @@ std::vector<char> readBinary(const std::string &filePath, std::size_t chunkSize 
     return content;
 }
 */
+bool appendData(const std::string filename, const char *data, std::size_t len) {
+    std::ofstream file(filename, std::ios::out | std::ios::app | std::ios::binary);
+
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return false;
+    }
+
+    file.write(data, len);
+
+    if (!file.good()) {
+        std::cerr << "Error writing to file: " << filename << std::endl;
+        return false;
+    }
+
+    file.close();
+    return true;
+}
+
 std::vector<char> readBinary(const std::string &filePath) {
     std::vector<char> content;
     std::ifstream file(filePath, std::ios::binary);

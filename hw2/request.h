@@ -32,6 +32,9 @@ class Request {
     ServeStage stage;
     bool connected;
     int contentLen;
+    int received;
+    std::string tmpName;
+
     std::string boundary;
     std::string URI;
     std::string credential;
@@ -39,6 +42,7 @@ class Request {
     std::string filePath;
     std::string Response;
 
+    static int fileCounter; // init to 0
     Request();
     //~Request();
     std::string recvHeader(int socket);
@@ -48,8 +52,7 @@ class Request {
   private:
     static const std::string headerName[5];
 
-    static bool matchHeaderName(const std::string &header,
-                                const std::string &name);
+    static bool matchHeaderName(const std::string &header, const std::string &name);
     static HeaderType getHeaderType(const std::string &header);
     static std::string extractHeaderValue(const std::string &header);
     bool parseRequestLine(const std::string request_line);

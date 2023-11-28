@@ -35,7 +35,8 @@ std::string decodeURI(const std::string &uri) {
     return decoded.str();
 }
 
-Request::Request() : method(GET), valid(true), stage(HEADER), connected(false) {}
+Request::Request() : method(GET), valid(true), stage(HEADER), connected(false), received(0) {}
+int Request::fileCounter = 0;
 
 #define INVALID_REQUEST(message)                                                                   \
     do {                                                                                           \
