@@ -280,7 +280,7 @@ if (ret.idx != Router::Unknown) {
                             */
                         }
                     }
-                    if (!(conns[i].revents & POLLOUT && request.response != "")) {
+                    if (!(conns[i].revents & POLLOUT)) {
                         cerr << "No POLLOUT, blocking response" << endl;
                     }
                     send(i, raw_resp.data(), raw_resp.size(), 0);
