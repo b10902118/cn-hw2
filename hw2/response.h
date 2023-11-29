@@ -27,6 +27,8 @@ class Response {
     // Set status code
     void setStatusCode(int statusCode);
 
+    bool isOK();
+
     // Get the formatted HTTP response
     // std::vector<char>
     // getFormattedResponse(const std::vector<char> body) const;
@@ -36,6 +38,7 @@ class Response {
     std::vector<char> res_401();
     std::vector<char> res_404();
     std::vector<char> res_500();
+    std::vector<char> res_invalid();
     std::vector<char> retHtml(const std::string html);
 
   private:

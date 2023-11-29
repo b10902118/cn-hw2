@@ -38,10 +38,10 @@ std::string decodeURI(const std::string &uri) {
 Request::Request() : method(GET), valid(true), stage(HEADER), connected(false), received(0) {}
 int Request::fileCounter = 0;
 
-#define INVALID_REQUEST(message)                                                                   \
-    do {                                                                                           \
-        valid = false;                                                                             \
-        std::cerr << "Invalid request: " << message << std::endl;                                  \
+#define INVALID_REQUEST(message)                                                                             \
+    do {                                                                                                     \
+        valid = false;                                                                                       \
+        std::cerr << "Invalid request: " << message << std::endl;                                            \
     } while (false)
 
 // Display the parsed request
@@ -177,9 +177,10 @@ bool Request::parseRequestLine(const std::string request_line) {
     std::string stripped_method;
     if (request_line.compare(0, 4, "GET ") == 0) {
         method = GET;
-        stage = ROUTE;
+        // stage = HEADER;
         stripped_method = request_line.substr(4); // skip "GET "
     }
+    // Can cause error
     else if (request_line.compare(0, 5, "POST ") == 0) {
         method = POST;
         stage = BODY;
@@ -262,8 +263,7 @@ if (pos > headers.length()) {
             contentType = std::string(value); // TODO  may contain form boundary
             if (contentType.compare(0, strlen("multipart/form-data"), "multipart/form-data") == 0) {
                 size_t pos = contentType.find("boundary=");
-                if (pos != std::string::npos)
-                    boundary = contentType.substr(pos + strlen("boundary="));
+                if (pos != std::string::npos) boundary = contentType.substr(pos + strlen("boundary="));
             }
             break;
         case Authorization:

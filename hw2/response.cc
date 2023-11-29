@@ -14,8 +14,10 @@ const std::map<int, std::string> Response::statusDescriptions = {
 
 // Constructor
 Response::Response()
-    : statusCode(200), serverHeader("CN2023Server/1.0"), contentType("text/plain"),
-      contentLength(0), Allow(GET) {}
+    : statusCode(200), serverHeader("CN2023Server/1.0"), contentType("text/plain"), contentLength(0),
+      Allow(GET) {}
+
+bool Response::isOK() { return statusCode == 200; }
 
 void Response::setContentType(const std::string &type) { contentType = type; }
 
@@ -125,6 +127,23 @@ std::vector<char> Response::res_500() {
 
     setStatusCode(500);
     return getFormattedResponse();
+}
+
+std::vector<char> Response::res_invalid() {
+    switch (statusCode) {
+    case 401:
+        return res_401();
+        break;
+    case 404:
+        return res_404();
+        break;
+    case 405:
+        return getFormattedResponse();
+        break;
+    case 500:
+    default:
+        return res_500();
+    }
 }
 
 std::vector<char> Response::retHtml(const std::string html) {

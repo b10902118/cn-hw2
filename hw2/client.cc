@@ -12,10 +12,10 @@
 using namespace std;
 #define BUFF_SIZE 1024
 //#define PORT 9999
-#define ERR_EXIT(a)                                                         \
-    {                                                                       \
-        perror(a);                                                          \
-        exit(1);                                                            \
+#define ERR_EXIT(a)                                                                                \
+    {                                                                                              \
+        perror(a);                                                                                 \
+        exit(1);                                                                                   \
     }
 
 std::string resolveDomainToIP(const std::string &domain, int myport) {
@@ -44,8 +44,7 @@ std::string resolveDomainToIP(const std::string &domain, int myport) {
             char ipstr[INET_ADDRSTRLEN];
 
             // Convert the IPv4 address to a string
-            inet_ntop(rp->ai_family, &(ipv4->sin_addr), ipstr,
-                      sizeof(ipstr));
+            inet_ntop(rp->ai_family, &(ipv4->sin_addr), ipstr, sizeof(ipstr));
             ipAddress = ipstr;
             break; // Break after the first IPv4 address is found
         }
@@ -53,15 +52,43 @@ std::string resolveDomainToIP(const std::string &domain, int myport) {
     return ipAddress;
 }
 
-enum Command {
-    Put,
-    Putv,
-    Get,
-    Quit,
-};
+enum Command { Put, Putv, Get, Quit, Unknown };
 
-const string start_usage =
-"Usage: ./client [host] [port] [username:password]";
+Command parseCommand(const std::string &command) {
+    if (command == "put") {
+        return Put;
+    }
+    else if (command == "putv") {
+        return Putv;
+    }
+    else if (command == "get") {
+        return Get;
+    }
+    else if (command == "quit") {
+        return Quit;
+    }
+    else {
+        return Unknown;
+    }
+}
+
+void printHelp(Command commandType) {
+    switch (commandType) {
+    case Put:
+        cerr << "Usage: put [file]" << endl;
+        break;
+    case Putv:
+        cerr << "Usage: putv [file]" << endl;
+        break;
+    case Get:
+        cerr << "Usage: get [file]" << endl;
+        break;
+    default:
+        cerr << "Error" << endl;
+    }
+}
+
+const string start_usage = "Usage: ./client [host] [port] [username:password]";
 
 string host;
 int port;
@@ -74,11 +101,14 @@ int main(int argc, char *argv[]) {
     host = string(argv[1]);
     port = atoi(argv[2]);
 
+    // unbuffered stdin
+    std::cout << std::unitbuf;
+    std::ios_base::sync_with_stdio(false);
+
     if (argc == 4) credential = string(argv[3]);
 
     string serverIP = resolveDomainToIP(host, port);
     cout << serverIP << endl;
-    return 0;
 
     int sockfd;
     struct sockaddr_in addr;
@@ -100,15 +130,48 @@ int main(int argc, char *argv[]) {
         ERR_EXIT("connect()");
     }
 
-    while (true) {
-    }
-    // Receive message from server
-    ssize_t n;
-    if ((n = read(sockfd, buffer, sizeof(buffer))) < 0) {
-        ERR_EXIT("read()");
-    }
+    std::string input, cmd, arg;
+    bool quit = false;
+    while (!quit) {
+        cout << "> ";
+        std::getline(std::cin, input);
 
-    printf("%s\n", buffer);
+        size_t spacePos = input.find(' ');
+        if (spacePos != string::npos) {
+            // Extract command and argument
+            cmd = input.substr(0, spacePos);
+            arg = (spacePos != std::string::npos) ? input.substr(spacePos + 1) : "";
+        }
+        else {
+            cmd = input;
+            arg = "";
+        }
+
+        Command commandType = parseCommand(cmd);
+        if (commandType != Unknown && commandType != Quit && arg == "") {
+            printHelp(commandType);
+            continue;
+        }
+        switch (commandType) {
+        case Put:
+            break;
+
+        case Putv:
+            break;
+
+        case Get:
+            break;
+
+        case Quit:
+            std::cout << "Bye." << std::endl;
+            quit = true;
+            break;
+
+        case Unknown:
+            std::cerr << "Command Not Found." << std::endl;
+            break;
+        }
+    }
 
     close(sockfd);
 

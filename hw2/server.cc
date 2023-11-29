@@ -31,6 +31,7 @@ const short poll_err = POLLERR | POLLNVAL | POLLHUP;
 const short poll_mask = poll_read | poll_write;
 
 Request requests[MAXFD];
+Response responses[MAXFD];
 char bodyBuf[BUFSZ];
 
 int main(int argc, char *argv[]) {
@@ -88,8 +89,7 @@ int main(int argc, char *argv[]) {
         // Check for activity on the server socket
         if (conns[listenfd].revents & POLLIN) {
             // Accept the client and get client file descriptor
-            if ((connfd =
-                 accept(listenfd, (sockaddr *)&client_addr, (socklen_t *)&client_addr_len)) < 0) {
+            if ((connfd = accept(listenfd, (sockaddr *)&client_addr, (socklen_t *)&client_addr_len)) < 0) {
                 ERR_EXIT("accept()");
             }
             conns[connfd].fd = connfd;
@@ -102,18 +102,19 @@ int main(int argc, char *argv[]) {
             // handle POLLOUT and response local kernel buffer may be
             // full so write block.
             if (conns[i].revents & poll_err) { // have to close it
-                                               // causing some fd broken
+                                               // TODO causing some fd broken
                 close(conns[i].fd);
                 conns[i].fd = -1;
             }
             else if (conns[i].revents & POLLIN) { // can be data or close (EOF)
-
-                // TODO unexpected close should not crash
+                // TODO unexpected close should not corrupt fd
                 Request &request = requests[i];
-                Response response;
+                Response &response = responses[i];
+                vector<char> raw_resp;
+                vector<char> fileBuf;
+                string fullPath;
                 // check recv header or body
-                cout << request.stage << endl;
-                if (request.stage == HEADER) {
+                if (request.stage == HEADER) { // combine routing
                     string httpHeader = request.recvHeader(i);
 
                     if (httpHeader == "" || !request.valid) {
@@ -130,39 +131,12 @@ int main(int argc, char *argv[]) {
                         continue;
                     }
                     request.showRequest();
-                }
-                else if (request.stage == BODY) { // receiving body
-                    request.tmpName = to_string(Request::fileCounter++);
-
-                    ssize_t to_recv = min(BUFSZ - 1, request.contentLen);
-                    // recv 0 don't
-                    // assume >0
-                    ssize_t n_recv = recv(i, bodyBuf, to_recv, 0);
-                    if (n_recv < 0) {
-                        perror("recv:");
-                    }
-                    else if (n_recv == 0) {
-                        cerr << "unexpected close of connection" << endl;
-                    }
-                    bodyBuf[n_recv] = '\0';
-                    // write to file
-                    Fs::appendData("./web/tmp/" + request.tmpName, bodyBuf, n_recv);
-                    request.received += n_recv;
-                    if (request.received == request.contentLen) {
-                        // Fs::parseUpload();
-                    }
-                    request.stage = ROUTE;
-                    //  TODO write to file, handle boundary & content length
-                    //  & filesize state: file too big
-                }
-                if (request.stage == ROUTE) { // Routing
+                    // ROUTE (stage should be HEADER here)
                     Router::Result ret = Router::route(request);
-                    vector<char> raw_resp;
-                    vector<char> fileBuf;
-                    string fullPath;
                     cout << "filePath: " << request.filePath << endl;
                     if (!ret.valid) {
                         if (ret.idx == Router::Unknown) { // 404
+                                                          // redundancy for BODY is okay
                             raw_resp = response.res_404();
                         }
                         else { // 405
@@ -189,8 +163,7 @@ int main(int argc, char *argv[]) {
                             break;
                         case Router::UploadVideo:
                             std::cout << "Routing to UploadVideo" << std::endl;
-                            if (!Auth::authorized(request.credential))
-                                raw_resp = response.res_401();
+                            if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
                             raw_resp = response.retHtml(Html::uploadv);
                             break;
 
@@ -226,13 +199,14 @@ int main(int argc, char *argv[]) {
 
                         case Router::ApiFile: // TODO
                             std::cout << "Routing to ApiFile" << std::endl;
-                            if (!Auth::authorized(request.credential))
+                            if (!Auth::authorized(request.credential)) {
                                 raw_resp = response.res_401();
+                            }
+                            request.stage = BODY;
                             break;
                         case Router::ApiFilePath:
                             std::cout << "Routing to ApiFilePath" << std::endl;
-                            if (!Auth::authorized(request.credential))
-                                raw_resp = response.res_401();
+                            if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
                             else {
                                 // check exist
                                 fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
@@ -242,20 +216,18 @@ int main(int argc, char *argv[]) {
                                 else {
                                     response.setContentType(Fs::getMimeType(request.filePath));
                                     fileBuf = Fs::readBinary(fullPath);
-                                    raw_resp =
-                                    response.getFormattedResponse(fileBuf.data(), fileBuf.size());
+                                    raw_resp = response.getFormattedResponse(fileBuf.data(), fileBuf.size());
                                 }
                             }
                             break;
                         case Router::ApiVideo: // TODO
                             std::cout << "Routing to ApiVideo" << std::endl;
-                            if (!Auth::authorized(request.credential))
-                                raw_resp = response.res_401();
+                            if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
+                            request.stage = BODY;
                             break;
                         case Router::ApiVideoPath:
                             std::cout << "Routing to ApiVideoPath" << std::endl;
-                            if (!Auth::authorized(request.credential))
-                                raw_resp = response.res_401();
+                            if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
                             else {
                                 // check exist
                                 fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
@@ -265,34 +237,65 @@ int main(int argc, char *argv[]) {
                                 else {
                                     response.setContentType(Fs::getMimeType(request.filePath));
                                     fileBuf = Fs::readBinary(fullPath);
-                                    raw_resp =
-                                    response.getFormattedResponse(fileBuf.data(), fileBuf.size());
+                                    raw_resp = response.getFormattedResponse(fileBuf.data(), fileBuf.size());
                                 }
                             }
                             break;
                         default:
                             std::cout << "Unknown routing result" << std::endl;
-                            // Default case for unknown result
-                            /*
-if (ret.idx != Router::Unknown) {
-    perror("Router::route");
-}
-                            */
                         }
                     }
-                    if (!(conns[i].revents & POLLOUT)) {
-                        cerr << "No POLLOUT, blocking response" << endl;
+                    if (request.stage == HEADER) { // no body
+                        if (!(conns[i].revents & POLLOUT)) {
+                            cerr << "No POLLOUT, blocking response" << endl;
+                        }
+                        send(i, raw_resp.data(), raw_resp.size(), MSG_NOSIGNAL);
+                        if (!request.connected) {
+                            close(conns[i].fd);
+                            conns[i].fd = -1;
+                            continue;
+                        }
                     }
-                    send(i, raw_resp.data(), raw_resp.size(), 0);
-                    if (!request.connected) {
-                        close(conns[i].fd);
-                        conns[i].fd = -1;
-                        continue;
+                }
+                if (request.stage == BODY) { // receiving body
+                                             // status code set
+                    if (response.isOK()) {
+                        request.tmpName = to_string(Request::fileCounter++);
+
+                        // read the body until no data, may still not contentLen
+                        ssize_t to_recv = min(BUFSZ - 1, request.contentLen), n_recv;
+                        while (to_recv > 0 && (n_recv = recv(i, bodyBuf, to_recv, 0)) > 0) {
+                            if (n_recv < 0) {
+                                perror("recv:");
+                            }
+                            bodyBuf[n_recv] = '\0';
+                            // TODO open before while loop
+                            Fs::appendData("./web/tmp/" + request.tmpName, bodyBuf, n_recv);
+                            request.received += n_recv;
+                        }
+                        if (request.received == request.contentLen) { // BODY end
+                            // Fs::parseUpload();
+                            // TODO send resp
+                            request.stage = HEADER;
+                        }
                     }
-                    request.stage = HEADER;
+                    else { // drain and discard
+                        ssize_t to_recv, n_recv;
+                        while ((to_recv = min(BUFSZ - 1, request.contentLen - request.received)) > 0 &&
+                               (n_recv = recv(i, bodyBuf, to_recv, 0)) > 0) {
+                            if (n_recv < 0) {
+                                perror("recv:");
+                            }
+                            request.received += n_recv;
+                        }
+                        if (request.received == request.contentLen) { // BODY end
+                            raw_resp = response.res_invalid();
+                            send(i, raw_resp.data(), raw_resp.size(), MSG_NOSIGNAL);
+                            request.stage = HEADER;
+                        }
+                    }
                 }
             }
-            //}
         }
     }
 }

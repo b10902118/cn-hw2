@@ -19,7 +19,7 @@ enum HeaderType {
     Other
 };
 
-enum ServeStage { HEADER, BODY, ROUTE };
+enum ServeStage { HEADER, BODY };
 
 std::string methodToString(Method method);
 

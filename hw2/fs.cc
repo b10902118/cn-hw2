@@ -59,6 +59,8 @@ std::string validPath(const std::string root, const std::string filePath) {
 }
 
 void parse_upload() {
+    //  TODO write to file, handle boundary & content length
+    //  & filesize state: file too big
     /*
 // parse file
 std::ifstream file("./web/tmp/" + request.tmpName, std::ios::binary);
