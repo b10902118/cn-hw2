@@ -14,7 +14,7 @@ std::string player;
 
 void init() {
     // Define the directory path
-    std::string webDirectory = "hw2/web/";
+    const std::string webDirectory = "./web/";
 
     // Read index.html
     index = Fs::readText(webDirectory + "index.html");
