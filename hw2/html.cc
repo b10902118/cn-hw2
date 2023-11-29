@@ -14,7 +14,7 @@ std::string player;
 
 void init() {
     // Define the directory path
-    std::string webDirectory = "./web/";
+    std::string webDirectory = "hw2/web/";
 
     // Read index.html
     index = Fs::readText(webDirectory + "index.html");
@@ -56,8 +56,7 @@ std::string toTableHerf(const std::string uriBase, const std::vector<std::string
     return result;
 }
 
-std::string replaceTag(const std::string &rhtml, const std::string &tagName,
-                       const std::string &content) {
+std::string replaceTag(const std::string &rhtml, const std::string &tagName, const std::string &content) {
     std::string ret(rhtml), tag = "<?" + tagName + "?>";
     size_t pos = ret.find(tag);
     if (pos != std::string::npos) {

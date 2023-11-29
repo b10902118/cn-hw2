@@ -15,9 +15,9 @@ using namespace std;
 
 namespace Fs {
 
-const std::string FileRoot = "web/files/";
-const std::string VideoRoot = "web/videos/";
-const std::string TmpDir = "web/tmp/";
+const std::string FileRoot = "hw2/web/files/";
+const std::string VideoRoot = "hw2/web/videos/";
+const std::string TmpDir = "hw2/web/tmp/";
 const std::string baseDir = "./";
 
 void init() {

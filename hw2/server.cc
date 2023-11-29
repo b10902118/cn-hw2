@@ -179,19 +179,19 @@ int main(int argc, char *argv[]) {
                         case Router::File:
                             std::cout << "Routing to File" << std::endl;
                             raw_resp = response.retHtml(
-                            Html::tagToList(Html::listf, "FILE_LIST", "/api/file/", "./web/files"));
+                            Html::tagToList(Html::listf, "FILE_LIST", "/api/file/", Fs::FileRoot));
 
                             break;
                         case Router::Video:
                             std::cout << "Routing to Video" << std::endl;
                             raw_resp = response.retHtml(
-                            Html::tagToList(Html::listv, "VIDEO_LIST", "/video/", "./web/videos"));
+                            Html::tagToList(Html::listv, "VIDEO_LIST", "/video/", Fs::VideoRoot));
                             break;
                         case Router::VideoPath:
                             std::cout << "Routing to VideoPath" << std::endl;
                             // clang-format off
 							fullPath = Fs::validPath(Fs::VideoRoot, request.filePath);
-							if (!Fs::fileExists("./web/videos/"+request.filePath)){//404
+							if (!Fs::fileExists(Fs::VideoRoot+request.filePath)){//404
                             	raw_resp = response.res_404();
 							}
 							else{
