@@ -3,7 +3,7 @@
 
 namespace Auth {
 
-const vector<string> secrets = Fs::readLines("hw2/secret");
+const vector<string> secrets = Fs::readLines("./secret");
 bool authorized(const string credential) {
     for (auto secret : secrets) {
         if (credential == secret) return true;
