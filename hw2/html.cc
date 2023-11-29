@@ -1,6 +1,8 @@
 #include "html.h"
 #include "fs.h"
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
 using namespace std;
 namespace Html {
@@ -44,13 +46,32 @@ std::string tagToList(const std::string rhtml, const std::string tag, const std:
     return replaced;
 }
 
+std::string urlEncode(const std::string &input) {
+    std::ostringstream encoded;
+    encoded.fill('0');
+    encoded << std::hex;
+
+    for (char c : input) {
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            // These characters are allowed as is
+            encoded << c;
+        }
+        else {
+            // Encode other characters using percent encoding (%XX)
+            encoded << '%' << std::setw(2) << int(static_cast<unsigned char>(c));
+        }
+    }
+
+    return encoded.str();
+}
+
 std::string toTableHerf(const std::string uriBase, const std::vector<std::string> files) {
     // Create an empty string to store the result
     std::string result;
 
     // Iterate over the files and construct the HTML table rows
     for (const auto &file : files) {
-        result += "<tr><td><a href=\"" + uriBase + file + "\">" + file + "</a></td></tr>\n";
+        result += "<tr><td><a href=\"" + uriBase + urlEncode(file) + "\">" + file + "</a></td></tr>\n";
     }
 
     return result;

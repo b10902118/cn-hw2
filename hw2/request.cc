@@ -12,7 +12,6 @@ std::string decodeURI(const std::string &uri) {
     for (std::size_t i = 0; i < uri.length(); ++i) {
         if (uri[i] == '%' && i + 2 < uri.length()) {
             try {
-                // TODO invalid case
                 auto hexChar = uri.substr(i + 1, 2);
                 auto decodedChar = static_cast<char>(std::stoi(hexChar, nullptr, 16));
                 decoded << decodedChar;
