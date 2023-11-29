@@ -9,13 +9,15 @@
 #include <iostream>
 #include <sys/types.h>
 #include <netdb.h>
+#include "request.h"
+#include "fs.h"
 using namespace std;
 #define BUFF_SIZE 1024
 //#define PORT 9999
-#define ERR_EXIT(a)                                                                                \
-    {                                                                                              \
-        perror(a);                                                                                 \
-        exit(1);                                                                                   \
+#define ERR_EXIT(a)                                                                                          \
+    {                                                                                                        \
+        perror(a);                                                                                           \
+        exit(1);                                                                                             \
     }
 
 std::string resolveDomainToIP(const std::string &domain, int myport) {
@@ -88,11 +90,65 @@ void printHelp(Command commandType) {
     }
 }
 
-const string start_usage = "Usage: ./client [host] [port] [username:password]";
+std::string urlEncode(const std::string &input) {
+    std::ostringstream encoded;
+    encoded.fill('0');
+    encoded << std::hex;
+
+    for (char c : input) {
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            // These characters are allowed as is
+            encoded << c;
+        }
+        else {
+            // Encode other characters using percent encoding (%XX)
+            encoded << '%' << std::setw(2) << int(static_cast<unsigned char>(c));
+        }
+    }
+
+    return encoded.str();
+}
 
 string host;
 int port;
 string credential;
+std::string createHttpHeader(Method method, const std::string &URI, const std::string &contentType = "",
+                             int contentLen = 0) {
+    std::ostringstream request;
+    // Request line
+    request << (method == GET ? "GET" : "POST") << " " << urlEncode(URI) << " HTTP/1.1\r\n";
+
+    // Host header
+    request << "Host: " << host + ":" + to_string(port) << "\r\n";
+
+    // User-Agent header
+    request << "User-Agent: "
+            << "CN2023Client/1.0"
+            << "\r\n";
+
+    // Connection header
+    request << "Connection: "
+            << "keep-alive"
+            << "\r\n";
+
+    // Content-Type header
+    if (!contentType.empty()) {
+        request << "Content-Type: " << contentType << "\r\n";
+    }
+
+    // Content-Length header
+    if (contentLen != 0 || method == POST) {
+        request << "Content-Length: " << content.length() << "\r\n";
+    }
+
+    // Empty line before the body
+    request << "\r\n";
+
+    return request.str();
+}
+
+const string start_usage = "Usage: ./client [host] [port] [username:password]";
+
 int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 4) {
         cerr << start_usage;
@@ -152,14 +208,32 @@ int main(int argc, char *argv[]) {
             printHelp(commandType);
             continue;
         }
+        string header;
+        vector<char> file, request;
         switch (commandType) {
         case Put:
+            if (!Fs::fileExists(arg)) {
+                cout << "Command failed." << endl;
+                break;
+            }
+            file = Fs::readBinary(arg);
+            header = createHttpHeader(POST, "/api/file", Fs::getMimeType(arg), file.size());
+            request = vector<char>(header.begin(), header.end());
+            for (int i = 0; i < file.size(); i++) request.push_back(file[i]);
+            send(sockfd, request.data(), request.size(), MSG_NOSIGNAL);
+            recv(sockfd, buf, sizeof(buf), 0);
             break;
 
         case Putv:
+            if (!Fs::fileExists(arg)) {
+                cout << "Command failed." << endl;
+                break;
+            }
+            // /api/video
             break;
 
         case Get:
+            // /api/file/{filepath}
             break;
 
         case Quit:
