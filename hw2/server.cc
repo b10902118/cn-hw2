@@ -215,17 +215,14 @@ int main(int argc, char *argv[]) {
                             break;
                         case Router::ApiFilePath:
                             std::cout << "Routing to ApiFilePath" << std::endl;
-                            if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
+                            fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
+                            if (!Fs::fileExists(fullPath)) { // 404
+                                raw_resp = response.res_404();
+                            }
                             else {
-                                fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
-                                if (!Fs::fileExists(fullPath)) { // 404
-                                    raw_resp = response.res_404();
-                                }
-                                else {
-                                    response.setContentType(Fs::getMimeType(request.filePath));
-                                    fileBuf = Fs::readBinary(fullPath);
-                                    raw_resp = response.getFormattedResponse(fileBuf.data(), fileBuf.size());
-                                }
+                                response.setContentType(Fs::getMimeType(request.filePath));
+                                fileBuf = Fs::readBinary(fullPath);
+                                raw_resp = response.getFormattedResponse(fileBuf.data(), fileBuf.size());
                             }
                             break;
                         case Router::ApiVideo: // TODO
@@ -237,18 +234,15 @@ int main(int argc, char *argv[]) {
                             break;
                         case Router::ApiVideoPath:
                             std::cout << "Routing to ApiVideoPath" << std::endl;
-                            if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
+                            // check exist
+                            fullPath = Fs::validPath(Fs::VideoRoot, request.filePath + "/dash.mpd");
+                            if (!Fs::fileExists(fullPath)) { // 404
+                                raw_resp = response.res_404();
+                            }
                             else {
-                                // check exist
-                                fullPath = Fs::validPath(Fs::VideoRoot, request.filePath + "/dash.mpd");
-                                if (!Fs::fileExists(fullPath)) { // 404
-                                    raw_resp = response.res_404();
-                                }
-                                else {
-                                    response.setContentType(Fs::getMimeType(request.filePath));
-                                    fileBuf = Fs::readBinary(fullPath);
-                                    raw_resp = response.getFormattedResponse(fileBuf.data(), fileBuf.size());
-                                }
+                                response.setContentType(Fs::getMimeType(request.filePath));
+                                fileBuf = Fs::readBinary(fullPath);
+                                raw_resp = response.getFormattedResponse(fileBuf.data(), fileBuf.size());
                             }
                             break;
                         default:
