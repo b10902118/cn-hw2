@@ -221,8 +221,8 @@ int main(int argc, char *argv[]) {
             request = vector<char>(header.begin(), header.end());
             for (int i = 0; i < file.size(); i++) request.push_back(file[i]);
             send(sockfd, request.data(), request.size(), MSG_NOSIGNAL);
-            recv(sockfd, buf, sizeof(buf), 0);
-            break;
+            int n_recv;
+            while ((n_recv = recv(sockfd, buf, sizeof(buf), 0)) > 0) break;
 
         case Putv:
             if (!Fs::fileExists(arg)) {
