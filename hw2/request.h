@@ -10,14 +10,7 @@
 #include "utils/base64.h"
 
 enum Method { GET, POST };
-enum HeaderType {
-    Connection,
-    Content_Type,
-    Authorization,
-    ContentLength,
-    ContentDisposition,
-    Other
-};
+enum HeaderType { Connection, Content_Type, Authorization, ContentLength, ContentDisposition, Other };
 
 enum ServeStage { HEADER, BODY };
 
@@ -43,7 +36,9 @@ class Request {
     std::string Response;
 
     static int fileCounter; // init to 0
+
     Request();
+    void init();
     //~Request();
     std::string recvHeader(int socket);
     void parseHeader(const std::string &httpHeader);

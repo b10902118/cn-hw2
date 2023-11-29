@@ -2,20 +2,25 @@
 #include "request.h"
 #include <cstddef>
 
-// Status code descriptions map
+// initialize static members
+// clang-format off
 const std::map<int, std::string> Response::statusDescriptions = {
 {200, "OK"},
 {401, "Unauthorized"},
 {404, "Not Found"},
 {405, "Method Not Allowed"},
 {500, "Internal Server Error"}
-// Add more status descriptions as needed
 };
+const std::string Response::serverHeader = "CN2023Server/1.0";
+Response::Response() : statusCode(200), contentType("text/plain"), contentLength(0), Allow(GET) {}
 
-// Constructor
-Response::Response()
-    : statusCode(200), serverHeader("CN2023Server/1.0"), contentType("text/plain"), contentLength(0),
-      Allow(GET) {}
+void Response::init() {
+    statusCode = 200;
+    contentType = "text/plain";
+    contentLength = 0;
+    Allow = GET;
+}
+//clang-format on
 
 bool Response::isOK() { return statusCode == 200; }
 

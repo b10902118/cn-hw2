@@ -115,6 +115,8 @@ int main(int argc, char *argv[]) {
                 string fullPath;
                 // check recv header or body
                 if (request.stage == HEADER) { // combine routing
+                    request.init();
+                    response.init();
                     string httpHeader = request.recvHeader(i);
                     if (httpHeader == "") { // unexpected close
                         cerr << "unexpected close" << endl;

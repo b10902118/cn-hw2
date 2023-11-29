@@ -13,9 +13,9 @@ class Response {
   public:
     // Constructor
     Response();
+    void init();
 
     // Setters for response headers
-    void setServerHeader(const std::string &server);
     void setContentType(const std::string &contentType);
     void setAllow(Method method);
 
@@ -41,13 +41,14 @@ class Response {
     std::vector<char> res_invalid();
     std::vector<char> retHtml(const std::string html);
 
+    static const std::string serverHeader;
+
   private:
     // Helper function to format headers
     std::string formatHeaders() const;
 
   private:
     int statusCode;
-    const std::string serverHeader;
     std::string contentType;
     size_t contentLength;
     Method Allow;

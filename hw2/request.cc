@@ -35,8 +35,25 @@ std::string decodeURI(const std::string &uri) {
     return decoded.str();
 }
 
-Request::Request() : method(GET), valid(true), stage(HEADER), connected(false), received(0) {}
 int Request::fileCounter = 0;
+Request::Request() : method(GET), valid(true), stage(HEADER), connected(false), received(0) {}
+
+void Request::init() {
+    method = GET;
+    valid = true;
+    stage = HEADER;
+    connected = false;
+    contentLen = 0;
+    received = 0;
+    tmpName.clear();
+
+    boundary.clear();
+    URI.clear();
+    credential.clear();
+    contentType.clear();
+    filePath.clear();
+    Response.clear();
+}
 
 #define INVALID_REQUEST(message)                                                                             \
     do {                                                                                                     \
