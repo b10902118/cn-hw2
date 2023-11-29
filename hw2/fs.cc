@@ -63,7 +63,6 @@ std::string validPath(const std::string root, const std::string filePath) {
 }
 
 const int max_size = 200 * 1024 * 1024;
-char fileData[max_size + 1024];
 
 // clang-format off
 const string cmd[] = {
@@ -105,30 +104,57 @@ void parseUpload(std::string tmpName, std::string boundary, bool isApiVideo) {
     getline(file, line);
     getline(file, line);
 
-    streamsize fileStart = file.tellg(), end;
+    char c;
+    size_t index = 0; // Index of the current character in the target string
+    const string target = "\r\n" + boundary;
+    vector<char> fileData;
 
-    // Get the size of the file
-    file.seekg(0, std::ios::end);
-    std::streamsize bodyEnd = file.tellg();
+    while (file.get(c)) {
+        if (c == target[index]) {
+            index++;
+            if (index == target.length()) {
+                break;
+            }
+        }
+        else {
+            // Reset index if characters don't match
+            for (int i = 0; i < index; ++i) fileData.push_back(target[i]);
+            index = 0;
 
-    streamsize fileEnd =
-    bodyEnd - (strlen("\r\n") + boundary.length() +
-               strlen("\r\nContent-Disposition: form-data; name=\"submit\"\r\n\r\nUpload\r\n") +
-               boundary.length() + strlen("--\r\n"));
-    streamsize fileSize = fileEnd - fileStart;
-    if (fileSize > max_size) {
-        // abort and rm
-        return;
+            fileData.push_back(c);
+        }
     }
 
-    file.seekg(fileStart);
-    file.read(fileData, fileSize);
+    /*
+streamsize fileStart = file.tellg(), end;
+
+// Get the size of the file
+file.seekg(0, std::ios::end);
+std::streamsize bodyEnd = file.tellg();
+
+streamsize fileEnd;
+if () {
+    fileEnd = bodyEnd - (strlen("\r\n") + boundary.length() +
+                         strlen("\r\nContent-Disposition: form-data; name=\"submit\"\r\n\r\nUpload\r\n") +
+                         boundary.length() + strlen("--\r\n"));
+}
+else {
+}
+streamsize fileSize = fileEnd - fileStart;
+if (fileSize > max_size) {
+    // abort and rm
+    return;
+}
+
+file.seekg(fileStart);
+file.read(fileData, fileSize);
+    */
     file.close();
     // unlink(tmpPath.c_str());
 
     if (isApiVideo) {
         const string tmpVideo = TmpDir + fileName;
-        writeFile(tmpVideo, fileData, fileSize);
+        writeFile(tmpVideo, fileData.data(), fileData.size());
         const string videoFolder = VideoRoot + strippedName + "/";
         removeDir(videoFolder);
         Fs::createDirectory(videoFolder);
@@ -157,7 +183,7 @@ void parseUpload(std::string tmpName, std::string boundary, bool isApiVideo) {
     }
     else { // normal file
         // cout << "writing to " << FileRoot + fileName << endl;
-        writeFile(FileRoot + fileName, fileData, fileSize);
+        writeFile(FileRoot + fileName, fileData.data(), fileData.size());
     }
     return;
 }
