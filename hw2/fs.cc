@@ -101,8 +101,9 @@ void parseUpload(std::string tmpName, std::string boundary, bool isApiVideo) {
         cout << strippedName << endl;
     }
 
-    getline(file, line);
-    getline(file, line);
+    while (getline(file, line)) {
+        if (line == "\r\n") break;
+    }
 
     char c;
     size_t index = 0; // Index of the current character in the target string
