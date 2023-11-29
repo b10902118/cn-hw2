@@ -102,7 +102,7 @@ void parseUpload(std::string tmpName, std::string boundary, bool isApiVideo) {
     }
 
     while (getline(file, line)) {
-        if (line == "\r\n") break;
+        if (line == "\r") break;
     }
 
     char c;
