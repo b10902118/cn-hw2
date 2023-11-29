@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include "request.h"
 #include "fs.h"
+#include <iomanip>
 using namespace std;
 #define BUFF_SIZE 1024
 //#define PORT 9999
@@ -138,7 +139,7 @@ std::string createHttpHeader(Method method, const std::string &URI, const std::s
 
     // Content-Length header
     if (contentLen != 0 || method == POST) {
-        request << "Content-Length: " << content.length() << "\r\n";
+        request << "Content-Length: " << contentLen << "\r\n";
     }
 
     // Empty line before the body
@@ -210,10 +211,12 @@ int main(int argc, char *argv[]) {
         }
         string header;
         vector<char> file, request;
+        char buf[1024];
+        int n_recv;
         switch (commandType) {
         case Put:
             if (!Fs::fileExists(arg)) {
-                cout << "Command failed." << endl;
+                cerr << "Command failed." << endl;
                 break;
             }
             file = Fs::readBinary(arg);
@@ -221,15 +224,24 @@ int main(int argc, char *argv[]) {
             request = vector<char>(header.begin(), header.end());
             for (int i = 0; i < file.size(); i++) request.push_back(file[i]);
             send(sockfd, request.data(), request.size(), MSG_NOSIGNAL);
-            int n_recv;
-            while ((n_recv = recv(sockfd, buf, sizeof(buf), 0)) > 0) break;
+            while ((n_recv = recv(sockfd, buf, sizeof(buf), 0)) > 0) {
+            }
+            cout << "Command succeeded." << endl;
+            break;
 
         case Putv:
             if (!Fs::fileExists(arg)) {
-                cout << "Command failed." << endl;
+                cerr << "Command failed." << endl;
                 break;
             }
-            // /api/video
+            file = Fs::readBinary(arg);
+            header = createHttpHeader(POST, "/api/video", Fs::getMimeType(arg), file.size());
+            request = vector<char>(header.begin(), header.end());
+            send(sockfd, request.data(), request.size(), MSG_NOSIGNAL);
+            int n_recv;
+            while ((n_recv = recv(sockfd, buf, sizeof(buf), 0)) > 0) {
+            }
+            cout << "Command succeeded." << endl;
             break;
 
         case Get:

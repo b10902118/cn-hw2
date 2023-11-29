@@ -5,7 +5,7 @@ CXXFLAGS := -Wall -Wno-unused-variable -Wno-sign-compare -Wno-char-subscripts
 #-fsanitize=address 
 
 SERVER_SRCS := server.cc request.cc utils.cc utils/base64.c backend.cc html.cc fs.cc response.cc auth.cc
-CLIENT_SRCS := client.cc request.cc utils.cc utils/base64.c
+CLIENT_SRCS := client.cc request.cc utils.cc utils/base64.c backend.cc html.cc fs.cc response.cc auth.cc 
 
 all: server client
 
