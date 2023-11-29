@@ -116,22 +116,29 @@ int main(int argc, char *argv[]) {
                 // check recv header or body
                 if (request.stage == HEADER) { // combine routing
                     string httpHeader = request.recvHeader(i);
-
-                    if (httpHeader == "" || !request.valid) {
+                    if (httpHeader == "") { // unexpected close
+                        cerr << "unexpected close" << endl;
+                        close(conns[i].fd);
+                        conns[i].fd = -1;
+                        continue;
+                    }
+                    if (!request.valid) {
                         vector<char> raw_resp = response.res_500();
                         send(i, raw_resp.data(), raw_resp.size(), 0);
                         cerr << "header invalid" << endl;
                         continue;
                     }
+
                     request.parseHeader(httpHeader);
                     if (!request.valid) {
                         vector<char> raw_resp = response.res_500();
                         send(i, raw_resp.data(), raw_resp.size(), 0);
-                        cerr << "request invalid" << endl;
+                        cerr << "cannot parse header" << endl;
                         continue;
                     }
                     request.showRequest();
-                    // ROUTE (stage should be HEADER here)
+
+                    // Routing (stage should be HEADER here)
                     Router::Result ret = Router::route(request);
                     cout << "filePath: " << request.filePath << endl;
                     if (!ret.valid) {

@@ -88,15 +88,31 @@ std::string Request::recvHeader(int socket) {
     char buffer[bufferSize];
 
     std::string httpHeader;
-    bool readable = true;
 
-    while (readable) {
+    while (true) {
         // Peek into the socket to read the data without removing it
+        int bytesAvailable, err = ioctl(socket, FIONREAD, &bytesAvailable);
+        if (err == -1) {
+            INVALID_REQUEST("recvHeader: ioctl");
+            // return "";
+            break;
+        }
+        else if (bytesAvailable == 0) {
+            break;
+        }
+        // bytesAvailable > 0
+
         ssize_t bytesRead = recv(socket, buffer, bufferSize - 1, MSG_PEEK);
 
-        if (bytesRead <= 0) {
+        if (bytesRead < 0) {
             // Error or connection closed
-            INVALID_REQUEST("recvHeader: recv bytesRead<=0");
+            INVALID_REQUEST("recvHeader: recv bytesRead<0");
+            // return "";
+            break;
+        }
+        if (bytesRead == 0) {
+            // Error or connection closed
+            INVALID_REQUEST("recvHeader: EOF");
             // return "";
             break;
         }
@@ -116,17 +132,7 @@ std::string Request::recvHeader(int socket) {
             // std::cout << "clean up kernel buffer" << std::endl;
             recv(socket, buffer, len, 0);
             // std::cout << "cleaned" << std::endl;
-
             break; // Exit the loop once the delimiter is found
-        }
-        else {
-            int bytesAvailable, err = ioctl(socket, FIONREAD, &bytesAvailable);
-            if (err == -1) {
-                INVALID_REQUEST("recvHeader: ioctl");
-                // return "";
-                break;
-            }
-            readable = bytesAvailable > 0;
         }
     }
 
