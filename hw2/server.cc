@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
                     }
                     if (!request.valid) {
                         vector<char> raw_resp = response.res_500();
-                        send(i, raw_resp.data(), raw_resp.size(), 0);
+                        send(i, raw_resp.data(), raw_resp.size(), MSG_NOSIGNAL);
                         cerr << "header invalid" << endl;
                         continue;
                     }
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
                     request.parseHeader(httpHeader);
                     if (!request.valid) {
                         vector<char> raw_resp = response.res_500();
-                        send(i, raw_resp.data(), raw_resp.size(), 0);
+                        send(i, raw_resp.data(), raw_resp.size(), MSG_NOSIGNAL);
                         cerr << "cannot parse header" << endl;
                         continue;
                     }
@@ -199,14 +199,14 @@ int main(int argc, char *argv[]) {
 									Html::replaceTag(
 										Html::replaceTag(Html::player, "VIDEO_NAME", request.filePath),
 										"MPD_PATH",
-										"/api/video/"+request.filePath
+										"\"" + string("/api/video/") + request.filePath + "\""
 									)
 								);
 							}
                             // clang-format on
                             break;
 
-                        case Router::ApiFile: // TODO
+                        case Router::ApiFile:
                             std::cout << "Routing to ApiFile" << std::endl;
                             if (!Auth::authorized(request.credential)) {
                                 raw_resp = response.res_401();
@@ -217,7 +217,6 @@ int main(int argc, char *argv[]) {
                             std::cout << "Routing to ApiFilePath" << std::endl;
                             if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
                             else {
-                                // check exist
                                 fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
                                 if (!Fs::fileExists(fullPath)) { // 404
                                     raw_resp = response.res_404();
@@ -231,7 +230,9 @@ int main(int argc, char *argv[]) {
                             break;
                         case Router::ApiVideo: // TODO
                             std::cout << "Routing to ApiVideo" << std::endl;
-                            if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
+                            if (!Auth::authorized(request.credential)) {
+                                raw_resp = response.res_401();
+                            }
                             request.stage = BODY;
                             break;
                         case Router::ApiVideoPath:
@@ -239,7 +240,7 @@ int main(int argc, char *argv[]) {
                             if (!Auth::authorized(request.credential)) raw_resp = response.res_401();
                             else {
                                 // check exist
-                                fullPath = Fs::validPath(Fs::FileRoot, request.filePath);
+                                fullPath = Fs::validPath(Fs::VideoRoot, request.filePath + "/dash.mpd");
                                 if (!Fs::fileExists(fullPath)) { // 404
                                     raw_resp = response.res_404();
                                 }
@@ -271,20 +272,22 @@ int main(int argc, char *argv[]) {
                     if (response.isOK()) {
                         request.tmpName = to_string(Request::fileCounter++);
 
-                        // read the body until no data, may still not contentLen
-                        ssize_t to_recv = min(BUFSZ - 1, request.contentLen), n_recv;
-                        while (to_recv > 0 && (n_recv = recv(i, bodyBuf, to_recv, 0)) > 0) {
+                        ssize_t to_recv, n_recv;
+                        while ((to_recv = min(BUFSZ - 1, request.contentLen - request.received)) > 0 &&
+                               (n_recv = recv(i, bodyBuf, to_recv, 0)) > 0) {
                             if (n_recv < 0) {
                                 perror("recv:");
                             }
-                            bodyBuf[n_recv] = '\0';
-                            // TODO open before while loop
-                            Fs::appendData("./web/tmp/" + request.tmpName, bodyBuf, n_recv);
                             request.received += n_recv;
+                            // bodyBuf[n_recv] = '\0';
+                            // cout << bodyBuf << endl;
+                            Fs::appendData(Fs::TmpDir + request.tmpName, bodyBuf, n_recv);
                         }
                         if (request.received == request.contentLen) { // BODY end
-                            // Fs::parseUpload();
-                            // TODO send resp
+                            Fs::parseUpload(request.tmpName, request.boundary, request.URI == "/api/video");
+                            raw_resp =
+                            response.getFormattedResponse("File Uploaded\n", strlen("File Uploaded\n"));
+                            send(i, raw_resp.data(), raw_resp.size(), MSG_NOSIGNAL);
                             request.stage = HEADER;
                         }
                     }

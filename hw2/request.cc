@@ -286,7 +286,8 @@ if (pos > headers.length()) {
             contentType = std::string(value); // TODO  may contain form boundary
             if (contentType.compare(0, strlen("multipart/form-data"), "multipart/form-data") == 0) {
                 size_t pos = contentType.find("boundary=");
-                if (pos != std::string::npos) boundary = contentType.substr(pos + strlen("boundary="));
+                if (pos != std::string::npos) boundary = "--" + contentType.substr(pos + strlen("boundary="));
+                // don't know why two more -
             }
             break;
         case Authorization:

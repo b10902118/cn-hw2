@@ -3,4 +3,7 @@
 
 *.o
 *~
+web/files
+web/videos
+web/tmp
 

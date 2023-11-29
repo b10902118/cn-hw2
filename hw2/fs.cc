@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <unistd.h>
 #include <cstdlib>
+#include <cstring>
 #include <limits.h> // For PATH_MAX
 
 using namespace std;
@@ -20,10 +21,13 @@ const std::string TmpDir = "web/tmp/";
 const std::string baseDir = "./";
 
 void init() {
+    removeDir(TmpDir);
     if (!createDirectory(TmpDir)) std::cerr << "cannot create dir";
     if (!createDirectory(FileRoot)) std::cerr << "cannot create dir";
     if (!createDirectory(VideoRoot)) std::cerr << "cannot create dir";
 }
+
+void removeDir(const string p) { system(("rm -rf " + p).c_str()); }
 
 std::string validPath(const std::string root, const std::string filePath) {
     char resolvedPath[PATH_MAX];
@@ -58,51 +62,123 @@ std::string validPath(const std::string root, const std::string filePath) {
     }
 }
 
-void parse_upload() {
+const int max_size = 200 * 1024 * 1024;
+char fileData[max_size + 1024];
+
+// clang-format off
+const string cmd[] = {
+"ffmpeg -re -i " ,
+//video file
+" -c:a aac -c:v libx264 "
+"-map 0 -b:v:1 6M -s:v:1 1920x1080 -profile:v:1 high "
+"-map 0 -b:v:0 144k -s:v:0 256x144 -profile:v:0 baseline " 
+"-bf 1 -keyint_min 120 -g 120 -sc_threshold 0 -b_strategy 0 "
+"-ar:a:1 22050 -use_timeline 1 -use_template 1 "
+"-adaptation_sets \"id=0,streams=v id=1,streams=a\" -f dash ",
+// video dir/dash.mpd
+//"/dash.mpd"
+};
+// clang-format on
+
+void parseUpload(std::string tmpName, std::string boundary, bool isApiVideo) {
     //  TODO write to file, handle boundary & content length
     //  & filesize state: file too big
-    /*
-// parse file
-std::ifstream file("./web/tmp/" + request.tmpName, std::ios::binary);
-std::string line, disposition;
-getline(file, line);
-getline(file, disposition);
-// extract name
-size_t pos = disposition.find("filename=\"");
-if (pos == string::npos) cerr << "disposition no filename" << endl;
-pos += strlen("filename=\"");
-request.filePath = disposition.substr(pos, disposition.length() - strlen("\"\r\n") - pos);
-Fs::createDirectory("./web/videos/" + request.filePath);
-
-getline(file, line);
-getline(file, line);
-bool first = true;
-string fullPath = "./web/tmp/" + request.filePath;
-while (std::getline(file, line, '\r')) {
-    if (line.substr(1) == request.boundary) break;
-    if (!first) {
-        line = "\r" + line;
-        first = false;
+    // parse file
+    string tmpPath = TmpDir + tmpName;
+    std::ifstream file(tmpPath, std::ios::binary);
+    std::string line, disposition;
+    getline(file, line);
+    getline(file, disposition);
+    // extract name
+    size_t pos = disposition.find("filename=\"");
+    if (pos == string::npos) cerr << "disposition no filename" << endl;
+    pos += strlen("filename=\"");
+    // \n stripped
+    string fileName = disposition.substr(pos, disposition.length() - strlen("\"\r") - pos);
+    string strippedName; // for video
+    cout << fileName << endl;
+    if (isApiVideo) {
+        strippedName = fileName.substr(0, fileName.length() - strlen(".mp4"));
+        cout << strippedName << endl;
     }
-    Fs::appendData(fullPath, line.c_str(), line.length());
-}
-pid_t pid = fork();
 
-if (pid == -1) {
-    // Handle fork error
-    std::cerr << "Error forking process." << std::endl;
-    return 1;
+    getline(file, line);
+    getline(file, line);
+
+    streamsize fileStart = file.tellg(), end;
+
+    // Get the size of the file
+    file.seekg(0, std::ios::end);
+    std::streamsize bodyEnd = file.tellg();
+
+    streamsize fileEnd =
+    bodyEnd - (strlen("\r\n") + boundary.length() +
+               strlen("\r\nContent-Disposition: form-data; name=\"submit\"\r\n\r\nUpload\r\n") +
+               boundary.length() + strlen("--\r\n"));
+    streamsize fileSize = fileEnd - fileStart;
+    if (fileSize > max_size) {
+        // abort and rm
+        return;
+    }
+
+    file.seekg(fileStart);
+    file.read(fileData, fileSize);
+    file.close();
+    // unlink(tmpPath.c_str());
+
+    if (isApiVideo) {
+        const string tmpVideo = TmpDir + fileName;
+        writeFile(tmpVideo, fileData, fileSize);
+        const string videoFolder = VideoRoot + strippedName + "/";
+        removeDir(videoFolder);
+        Fs::createDirectory(videoFolder);
+        pid_t pid = fork();
+        cout << "forking" << endl;
+        if (pid == -1) {
+            // Handle fork error
+            std::cerr << "Error forking process." << std::endl;
+            return;
+        }
+        else if (pid == 0) {
+            // This is the child process
+            string command =
+            cmd[0] + "\"" + tmpVideo + "\"" + cmd[1] + "\"" + videoFolder + "dash.mpd" + "\"";
+            cout << command << endl;
+            int ret = system(command.c_str());
+            cout << "done" << endl;
+            if (ret == -1) {
+                std::cerr << "system: create new process fail" << std::endl;
+            }
+            else if (ret != 0) {
+                std::cerr << "return value: " << ret << std::endl;
+            }
+            _exit(1);
+        }
+    }
+    else { // normal file
+        // cout << "writing to " << FileRoot + fileName << endl;
+        writeFile(FileRoot + fileName, fileData, fileSize);
+    }
+    return;
 }
-else if (pid == 0) {
-    // This is the child process
-    execl("/bin/sh", "sh", "-c", command, nullptr);
-    // If execl fails
-    std::cerr << "Error executing the command." << std::endl;
-    _exit(1);
-}
-else {
-}
-    */
+
+bool writeFile(const std::string filename, const char *data, std::size_t len) {
+    std::ofstream file(filename, std::ios::out | std::ios::binary);
+
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return false;
+    }
+
+    file.write(data, len);
+
+    if (!file.good()) {
+        std::cerr << "Error writing to file: " << filename << std::endl;
+        return false;
+    }
+
+    file.close();
+    return true;
 }
 
 std::vector<std::string> readLines(const std::string &filePath) {
@@ -226,9 +302,8 @@ std::vector<std::string> listDir(const std::string &dirPath) {
 }
 // Define a mapping of file extensions to MIME types
 const std::unordered_map<std::string, std::string> mimeTypes = {
-{"html", "text/html"},          {"rhtml", "text/html"},       {"mp4", "video/mp4"},
-{"m4v", "video/mp4"},           {"m4s", "video/iso.segment"}, {"m4a", "audio/mp4"},
-{"mpd", "application/dash+xml"}
+{"html", "text/html"},        {"rhtml", "text/html"}, {"mp4", "video/mp4"},           {"m4v", "video/mp4"},
+{"m4s", "video/iso.segment"}, {"m4a", "audio/mp4"},   {"mpd", "application/dash+xml"}
 // Add more mappings as needed
 };
 
