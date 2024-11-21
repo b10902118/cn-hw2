@@ -2,7 +2,7 @@
 
 ## DEMO
 
-[](./demo.gif)
+![](./demo.gif)
 
 ## Compilation
 ```
